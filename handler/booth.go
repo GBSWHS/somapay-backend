@@ -34,6 +34,17 @@ func CreateBoothHandler(client *ent.Client) fiber.Handler {
 	}
 }
 
+func ListBoothsHandler(client *ent.Client) fiber.Handler {
+	return func(c *fiber.Ctx) error {
+		booths, err := client.Booth.Query().All(c.Context())
+		if err != nil {
+			return c.Status(fiber.StatusInternalServerError).JSON(fiber.Map{"error": "query failed"})
+		}
+
+		return c.JSON(booths)
+	}
+}
+
 func GetBoothHandler(client *ent.Client) fiber.Handler {
 	return func(c *fiber.Ctx) error {
 		boothID64, err := strconv.Atoi(c.Params("id"))

@@ -3,6 +3,7 @@ package handler
 import (
 	"github.com/gofiber/fiber/v2"
 	"somapay-backend/ent"
+	"somapay-backend/ent/booth"
 	"somapay-backend/ent/product"
 	"strconv"
 )
@@ -52,6 +53,41 @@ func CreateProductHandler(client *ent.Client) fiber.Handler {
 		}
 
 		return c.JSON(p)
+	}
+}
+
+func ListAllProductsHandler(client *ent.Client) fiber.Handler {
+	return func(c *fiber.Ctx) error {
+		if !isAdmin(c) {
+			return c.Status(fiber.StatusForbidden).JSON(fiber.Map{"error": "forbidden"})
+		}
+
+		ps, err := client.Product.Query().All(c.Context())
+		if err != nil {
+			return c.Status(fiber.StatusInternalServerError).JSON(fiber.Map{"error": "query failed"})
+		}
+
+		return c.JSON(ps)
+	}
+}
+
+func ListProductsByBoothHandler(client *ent.Client) fiber.Handler {
+	return func(c *fiber.Ctx) error {
+		boothID, err := strconv.Atoi(c.Params("booth_id"))
+		if err != nil {
+			return c.Status(fiber.StatusBadRequest).JSON(fiber.Map{"error": "invalid booth id"})
+		}
+
+		ps, err := client.Product.
+			Query().
+			Where(product.HasBoothWith(booth.IDEQ(boothID))).
+			All(c.Context())
+
+		if err != nil {
+			return c.Status(fiber.StatusInternalServerError).JSON(fiber.Map{"error": "query failed"})
+		}
+
+		return c.JSON(ps)
 	}
 }
 

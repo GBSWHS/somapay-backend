@@ -56,12 +56,15 @@ func setupRoutes(app *fiber.App, client *ent.Client, sessionStore *storage.Sessi
 	// Booth Routes
 	boothGroup := app.Group("/booths", auth)
 	boothGroup.Post("/", handler.CreateBoothHandler(client))
+	boothGroup.Get("/", handler.ListBoothsHandler(client))
 	boothGroup.Get("/:id", handler.GetBoothHandler(client))
 	boothGroup.Patch("/:id", handler.UpdateBoothHandler(client))
 	boothGroup.Delete("/:id", handler.DeleteBoothHandler(client))
 
 	// Product Routes
 	productGroup := app.Group("/products", auth)
+	productGroup.Get("/", handler.ListAllProductsHandler(client))
+	productGroup.Get("/booth/:booth_id", handler.ListProductsByBoothHandler(client))
 	productGroup.Get("/:id", handler.GetProductHandler(client))
 	productGroup.Post("/", handler.CreateProductHandler(client))
 	productGroup.Patch("/:id", handler.UpdateProductHandler(client))
