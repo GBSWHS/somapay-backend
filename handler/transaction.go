@@ -148,6 +148,7 @@ func ListTransactionsHandler(client *ent.Client) fiber.Handler {
 			if err != nil {
 				return c.Status(fiber.StatusInternalServerError).JSON(fiber.Map{"error": "query failed"})
 			}
+
 		case "HOST":
 			allTx, err := query.All(c.Context())
 			if err != nil {
@@ -155,10 +156,11 @@ func ListTransactionsHandler(client *ent.Client) fiber.Handler {
 			}
 
 			for _, t := range allTx {
-				if t.Edges.Booth != nil && t.Edges.Booth.Edges.User.ID == user.ID {
+				if (t.Edges.Booth != nil && t.Edges.Booth.Edges.User.ID == user.ID) || t.Edges.User.ID == user.ID {
 					ts = append(ts, t)
 				}
 			}
+
 		default:
 			allTx, err := query.All(c.Context())
 			if err != nil {

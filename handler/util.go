@@ -21,6 +21,11 @@ func isAdmin(c *fiber.Ctx) bool {
 	return u.Role == "ADMIN"
 }
 
+func isHost(c *fiber.Ctx) bool {
+	u := c.Locals("user").(*ent.User)
+	return u.Role == "HOST"
+}
+
 func isHostOfBooth(c *fiber.Ctx, boothID int, client *ent.Client) bool {
 	u := c.Locals("user").(*ent.User)
 
