@@ -18,19 +18,19 @@ const (
 	FieldDescription = "description"
 	// FieldPrice holds the string denoting the price field in the database.
 	FieldPrice = "price"
-	// FieldQuantity holds the string denoting the quantity field in the database.
-	FieldQuantity = "quantity"
 	// EdgeBooth holds the string denoting the booth edge name in mutations.
 	EdgeBooth = "booth"
 	// EdgeTransactions holds the string denoting the transactions edge name in mutations.
 	EdgeTransactions = "transactions"
 	// Table holds the table name of the product in the database.
 	Table = "products"
-	// BoothTable is the table that holds the booth relation/edge. The primary key declared below.
-	BoothTable = "booth_products"
+	// BoothTable is the table that holds the booth relation/edge.
+	BoothTable = "products"
 	// BoothInverseTable is the table name for the Booth entity.
 	// It exists in this package in order to avoid circular dependency with the "booth" package.
 	BoothInverseTable = "booths"
+	// BoothColumn is the table column denoting the booth relation/edge.
+	BoothColumn = "product_booth"
 	// TransactionsTable is the table that holds the transactions relation/edge.
 	TransactionsTable = "transactions"
 	// TransactionsInverseTable is the table name for the Transaction entity.
@@ -46,19 +46,24 @@ var Columns = []string{
 	FieldName,
 	FieldDescription,
 	FieldPrice,
-	FieldQuantity,
 }
 
-var (
-	// BoothPrimaryKey and BoothColumn2 are the table columns denoting the
-	// primary key for the booth relation (M2M).
-	BoothPrimaryKey = []string{"booth_id", "product_id"}
-)
+// ForeignKeys holds the SQL foreign-keys that are owned by the "products"
+// table and are not defined as standalone fields in the schema.
+var ForeignKeys = []string{
+	"booth_products",
+	"product_booth",
+}
 
 // ValidColumn reports if the column name is valid (part of the table columns).
 func ValidColumn(column string) bool {
 	for i := range Columns {
 		if column == Columns[i] {
+			return true
+		}
+	}
+	for i := range ForeignKeys {
+		if column == ForeignKeys[i] {
 			return true
 		}
 	}
@@ -88,22 +93,10 @@ func ByPrice(opts ...sql.OrderTermOption) OrderOption {
 	return sql.OrderByField(FieldPrice, opts...).ToFunc()
 }
 
-// ByQuantity orders the results by the quantity field.
-func ByQuantity(opts ...sql.OrderTermOption) OrderOption {
-	return sql.OrderByField(FieldQuantity, opts...).ToFunc()
-}
-
-// ByBoothCount orders the results by booth count.
-func ByBoothCount(opts ...sql.OrderTermOption) OrderOption {
+// ByBoothField orders the results by booth field.
+func ByBoothField(field string, opts ...sql.OrderTermOption) OrderOption {
 	return func(s *sql.Selector) {
-		sqlgraph.OrderByNeighborsCount(s, newBoothStep(), opts...)
-	}
-}
-
-// ByBooth orders the results by booth terms.
-func ByBooth(term sql.OrderTerm, terms ...sql.OrderTerm) OrderOption {
-	return func(s *sql.Selector) {
-		sqlgraph.OrderByNeighborTerms(s, newBoothStep(), append([]sql.OrderTerm{term}, terms...)...)
+		sqlgraph.OrderByNeighborTerms(s, newBoothStep(), sql.OrderByField(field, opts...))
 	}
 }
 
@@ -124,7 +117,7 @@ func newBoothStep() *sqlgraph.Step {
 	return sqlgraph.NewStep(
 		sqlgraph.From(Table, FieldID),
 		sqlgraph.To(BoothInverseTable, FieldID),
-		sqlgraph.Edge(sqlgraph.M2M, true, BoothTable, BoothPrimaryKey...),
+		sqlgraph.Edge(sqlgraph.M2O, false, BoothTable, BoothColumn),
 	)
 }
 func newTransactionsStep() *sqlgraph.Step {

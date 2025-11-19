@@ -46,10 +46,6 @@ func CreateTransactionHandler(client *ent.Client) fiber.Handler {
 			return c.Status(fiber.StatusNotFound).JSON(fiber.Map{"error": "product not found"})
 		}
 
-		if p.Quantity < int64(req.Quantity) {
-			return c.Status(fiber.StatusBadRequest).JSON(fiber.Map{"error": "not enough stock"})
-		}
-
 		total := p.Price * int64(req.Quantity)
 
 		if u.Point < total {
@@ -64,14 +60,6 @@ func CreateTransactionHandler(client *ent.Client) fiber.Handler {
 			return err
 		}
 
-		// Product 재고 차감
-		_, err = tx.Product.UpdateOne(p).
-			AddQuantity(int64(-req.Quantity)).
-			Save(c.Context())
-		if err != nil {
-			return err
-		}
-
 		boothID, err := tx.Product.
 			Query().
 			Where(product.IDEQ(p.ID)).
@@ -81,7 +69,6 @@ func CreateTransactionHandler(client *ent.Client) fiber.Handler {
 			return c.Status(fiber.StatusInternalServerError).JSON(fiber.Map{"error": "cannot get booth id"})
 		}
 
-		// Transaction 생성
 		t, err := tx.Transaction.
 			Create().
 			SetUserID(u.ID).

@@ -47,25 +47,15 @@ func (_c *ProductCreate) SetPrice(v int64) *ProductCreate {
 	return _c
 }
 
-// SetQuantity sets the "quantity" field.
-func (_c *ProductCreate) SetQuantity(v int64) *ProductCreate {
-	_c.mutation.SetQuantity(v)
+// SetBoothID sets the "booth" edge to the Booth entity by ID.
+func (_c *ProductCreate) SetBoothID(id int) *ProductCreate {
+	_c.mutation.SetBoothID(id)
 	return _c
 }
 
-// AddBoothIDs adds the "booth" edge to the Booth entity by IDs.
-func (_c *ProductCreate) AddBoothIDs(ids ...int) *ProductCreate {
-	_c.mutation.AddBoothIDs(ids...)
-	return _c
-}
-
-// AddBooth adds the "booth" edges to the Booth entity.
-func (_c *ProductCreate) AddBooth(v ...*Booth) *ProductCreate {
-	ids := make([]int, len(v))
-	for i := range v {
-		ids[i] = v[i].ID
-	}
-	return _c.AddBoothIDs(ids...)
+// SetBooth sets the "booth" edge to the Booth entity.
+func (_c *ProductCreate) SetBooth(v *Booth) *ProductCreate {
+	return _c.SetBoothID(v.ID)
 }
 
 // AddTransactionIDs adds the "transactions" edge to the Transaction entity by IDs.
@@ -123,9 +113,6 @@ func (_c *ProductCreate) check() error {
 	if _, ok := _c.mutation.Price(); !ok {
 		return &ValidationError{Name: "price", err: errors.New(`ent: missing required field "Product.price"`)}
 	}
-	if _, ok := _c.mutation.Quantity(); !ok {
-		return &ValidationError{Name: "quantity", err: errors.New(`ent: missing required field "Product.quantity"`)}
-	}
 	if len(_c.mutation.BoothIDs()) == 0 {
 		return &ValidationError{Name: "booth", err: errors.New(`ent: missing required edge "Product.booth"`)}
 	}
@@ -167,16 +154,12 @@ func (_c *ProductCreate) createSpec() (*Product, *sqlgraph.CreateSpec) {
 		_spec.SetField(product.FieldPrice, field.TypeInt64, value)
 		_node.Price = value
 	}
-	if value, ok := _c.mutation.Quantity(); ok {
-		_spec.SetField(product.FieldQuantity, field.TypeInt64, value)
-		_node.Quantity = value
-	}
 	if nodes := _c.mutation.BoothIDs(); len(nodes) > 0 {
 		edge := &sqlgraph.EdgeSpec{
-			Rel:     sqlgraph.M2M,
-			Inverse: true,
+			Rel:     sqlgraph.M2O,
+			Inverse: false,
 			Table:   product.BoothTable,
-			Columns: product.BoothPrimaryKey,
+			Columns: []string{product.BoothColumn},
 			Bidi:    false,
 			Target: &sqlgraph.EdgeTarget{
 				IDSpec: sqlgraph.NewFieldSpec(booth.FieldID, field.TypeInt),
@@ -185,6 +168,7 @@ func (_c *ProductCreate) createSpec() (*Product, *sqlgraph.CreateSpec) {
 		for _, k := range nodes {
 			edge.Target.Nodes = append(edge.Target.Nodes, k)
 		}
+		_node.product_booth = &nodes[0]
 		_spec.Edges = append(_spec.Edges, edge)
 	}
 	if nodes := _c.mutation.TransactionsIDs(); len(nodes) > 0 {

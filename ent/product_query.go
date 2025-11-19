@@ -27,6 +27,7 @@ type ProductQuery struct {
 	predicates       []predicate.Product
 	withBooth        *BoothQuery
 	withTransactions *TransactionQuery
+	withFKs          bool
 	// intermediate query (i.e. traversal path).
 	sql  *sql.Selector
 	path func(context.Context) (*sql.Selector, error)
@@ -77,7 +78,7 @@ func (_q *ProductQuery) QueryBooth() *BoothQuery {
 		step := sqlgraph.NewStep(
 			sqlgraph.From(product.Table, product.FieldID, selector),
 			sqlgraph.To(booth.Table, booth.FieldID),
-			sqlgraph.Edge(sqlgraph.M2M, true, product.BoothTable, product.BoothPrimaryKey...),
+			sqlgraph.Edge(sqlgraph.M2O, false, product.BoothTable, product.BoothColumn),
 		)
 		fromU = sqlgraph.SetNeighbors(_q.driver.Dialect(), step)
 		return fromU, nil
@@ -406,12 +407,19 @@ func (_q *ProductQuery) prepareQuery(ctx context.Context) error {
 func (_q *ProductQuery) sqlAll(ctx context.Context, hooks ...queryHook) ([]*Product, error) {
 	var (
 		nodes       = []*Product{}
+		withFKs     = _q.withFKs
 		_spec       = _q.querySpec()
 		loadedTypes = [2]bool{
 			_q.withBooth != nil,
 			_q.withTransactions != nil,
 		}
 	)
+	if _q.withBooth != nil {
+		withFKs = true
+	}
+	if withFKs {
+		_spec.Node.Columns = append(_spec.Node.Columns, product.ForeignKeys...)
+	}
 	_spec.ScanValues = func(columns []string) ([]any, error) {
 		return (*Product).scanValues(nil, columns)
 	}
@@ -431,9 +439,8 @@ func (_q *ProductQuery) sqlAll(ctx context.Context, hooks ...queryHook) ([]*Prod
 		return nodes, nil
 	}
 	if query := _q.withBooth; query != nil {
-		if err := _q.loadBooth(ctx, query, nodes,
-			func(n *Product) { n.Edges.Booth = []*Booth{} },
-			func(n *Product, e *Booth) { n.Edges.Booth = append(n.Edges.Booth, e) }); err != nil {
+		if err := _q.loadBooth(ctx, query, nodes, nil,
+			func(n *Product, e *Booth) { n.Edges.Booth = e }); err != nil {
 			return nil, err
 		}
 	}
@@ -448,62 +455,33 @@ func (_q *ProductQuery) sqlAll(ctx context.Context, hooks ...queryHook) ([]*Prod
 }
 
 func (_q *ProductQuery) loadBooth(ctx context.Context, query *BoothQuery, nodes []*Product, init func(*Product), assign func(*Product, *Booth)) error {
-	edgeIDs := make([]driver.Value, len(nodes))
-	byID := make(map[int]*Product)
-	nids := make(map[int]map[*Product]struct{})
-	for i, node := range nodes {
-		edgeIDs[i] = node.ID
-		byID[node.ID] = node
-		if init != nil {
-			init(node)
+	ids := make([]int, 0, len(nodes))
+	nodeids := make(map[int][]*Product)
+	for i := range nodes {
+		if nodes[i].product_booth == nil {
+			continue
 		}
+		fk := *nodes[i].product_booth
+		if _, ok := nodeids[fk]; !ok {
+			ids = append(ids, fk)
+		}
+		nodeids[fk] = append(nodeids[fk], nodes[i])
 	}
-	query.Where(func(s *sql.Selector) {
-		joinT := sql.Table(product.BoothTable)
-		s.Join(joinT).On(s.C(booth.FieldID), joinT.C(product.BoothPrimaryKey[0]))
-		s.Where(sql.InValues(joinT.C(product.BoothPrimaryKey[1]), edgeIDs...))
-		columns := s.SelectedColumns()
-		s.Select(joinT.C(product.BoothPrimaryKey[1]))
-		s.AppendSelect(columns...)
-		s.SetDistinct(false)
-	})
-	if err := query.prepareQuery(ctx); err != nil {
-		return err
+	if len(ids) == 0 {
+		return nil
 	}
-	qr := QuerierFunc(func(ctx context.Context, q Query) (Value, error) {
-		return query.sqlAll(ctx, func(_ context.Context, spec *sqlgraph.QuerySpec) {
-			assign := spec.Assign
-			values := spec.ScanValues
-			spec.ScanValues = func(columns []string) ([]any, error) {
-				values, err := values(columns[1:])
-				if err != nil {
-					return nil, err
-				}
-				return append([]any{new(sql.NullInt64)}, values...), nil
-			}
-			spec.Assign = func(columns []string, values []any) error {
-				outValue := int(values[0].(*sql.NullInt64).Int64)
-				inValue := int(values[1].(*sql.NullInt64).Int64)
-				if nids[inValue] == nil {
-					nids[inValue] = map[*Product]struct{}{byID[outValue]: {}}
-					return assign(columns[1:], values[1:])
-				}
-				nids[inValue][byID[outValue]] = struct{}{}
-				return nil
-			}
-		})
-	})
-	neighbors, err := withInterceptors[[]*Booth](ctx, query, qr, query.inters)
+	query.Where(booth.IDIn(ids...))
+	neighbors, err := query.All(ctx)
 	if err != nil {
 		return err
 	}
 	for _, n := range neighbors {
-		nodes, ok := nids[n.ID]
+		nodes, ok := nodeids[n.ID]
 		if !ok {
-			return fmt.Errorf(`unexpected "booth" node returned %v`, n.ID)
+			return fmt.Errorf(`unexpected foreign-key "product_booth" returned %v`, n.ID)
 		}
-		for kn := range nodes {
-			assign(kn, n)
+		for i := range nodes {
+			assign(nodes[i], n)
 		}
 	}
 	return nil

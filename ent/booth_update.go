@@ -219,10 +219,10 @@ func (_u *BoothUpdate) sqlSave(ctx context.Context) (_node int, err error) {
 	}
 	if _u.mutation.ProductsCleared() {
 		edge := &sqlgraph.EdgeSpec{
-			Rel:     sqlgraph.M2M,
+			Rel:     sqlgraph.O2M,
 			Inverse: false,
 			Table:   booth.ProductsTable,
-			Columns: booth.ProductsPrimaryKey,
+			Columns: []string{booth.ProductsColumn},
 			Bidi:    false,
 			Target: &sqlgraph.EdgeTarget{
 				IDSpec: sqlgraph.NewFieldSpec(product.FieldID, field.TypeInt),
@@ -232,10 +232,10 @@ func (_u *BoothUpdate) sqlSave(ctx context.Context) (_node int, err error) {
 	}
 	if nodes := _u.mutation.RemovedProductsIDs(); len(nodes) > 0 && !_u.mutation.ProductsCleared() {
 		edge := &sqlgraph.EdgeSpec{
-			Rel:     sqlgraph.M2M,
+			Rel:     sqlgraph.O2M,
 			Inverse: false,
 			Table:   booth.ProductsTable,
-			Columns: booth.ProductsPrimaryKey,
+			Columns: []string{booth.ProductsColumn},
 			Bidi:    false,
 			Target: &sqlgraph.EdgeTarget{
 				IDSpec: sqlgraph.NewFieldSpec(product.FieldID, field.TypeInt),
@@ -248,10 +248,10 @@ func (_u *BoothUpdate) sqlSave(ctx context.Context) (_node int, err error) {
 	}
 	if nodes := _u.mutation.ProductsIDs(); len(nodes) > 0 {
 		edge := &sqlgraph.EdgeSpec{
-			Rel:     sqlgraph.M2M,
+			Rel:     sqlgraph.O2M,
 			Inverse: false,
 			Table:   booth.ProductsTable,
-			Columns: booth.ProductsPrimaryKey,
+			Columns: []string{booth.ProductsColumn},
 			Bidi:    false,
 			Target: &sqlgraph.EdgeTarget{
 				IDSpec: sqlgraph.NewFieldSpec(product.FieldID, field.TypeInt),
@@ -546,10 +546,10 @@ func (_u *BoothUpdateOne) sqlSave(ctx context.Context) (_node *Booth, err error)
 	}
 	if _u.mutation.ProductsCleared() {
 		edge := &sqlgraph.EdgeSpec{
-			Rel:     sqlgraph.M2M,
+			Rel:     sqlgraph.O2M,
 			Inverse: false,
 			Table:   booth.ProductsTable,
-			Columns: booth.ProductsPrimaryKey,
+			Columns: []string{booth.ProductsColumn},
 			Bidi:    false,
 			Target: &sqlgraph.EdgeTarget{
 				IDSpec: sqlgraph.NewFieldSpec(product.FieldID, field.TypeInt),
@@ -559,10 +559,10 @@ func (_u *BoothUpdateOne) sqlSave(ctx context.Context) (_node *Booth, err error)
 	}
 	if nodes := _u.mutation.RemovedProductsIDs(); len(nodes) > 0 && !_u.mutation.ProductsCleared() {
 		edge := &sqlgraph.EdgeSpec{
-			Rel:     sqlgraph.M2M,
+			Rel:     sqlgraph.O2M,
 			Inverse: false,
 			Table:   booth.ProductsTable,
-			Columns: booth.ProductsPrimaryKey,
+			Columns: []string{booth.ProductsColumn},
 			Bidi:    false,
 			Target: &sqlgraph.EdgeTarget{
 				IDSpec: sqlgraph.NewFieldSpec(product.FieldID, field.TypeInt),
@@ -575,10 +575,10 @@ func (_u *BoothUpdateOne) sqlSave(ctx context.Context) (_node *Booth, err error)
 	}
 	if nodes := _u.mutation.ProductsIDs(); len(nodes) > 0 {
 		edge := &sqlgraph.EdgeSpec{
-			Rel:     sqlgraph.M2M,
+			Rel:     sqlgraph.O2M,
 			Inverse: false,
 			Table:   booth.ProductsTable,
-			Columns: booth.ProductsPrimaryKey,
+			Columns: []string{booth.ProductsColumn},
 			Bidi:    false,
 			Target: &sqlgraph.EdgeTarget{
 				IDSpec: sqlgraph.NewFieldSpec(product.FieldID, field.TypeInt),

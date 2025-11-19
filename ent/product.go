@@ -4,6 +4,7 @@ package ent
 
 import (
 	"fmt"
+	"somapay-backend/ent/booth"
 	"somapay-backend/ent/product"
 	"strings"
 
@@ -22,18 +23,18 @@ type Product struct {
 	Description string `json:"description,omitempty"`
 	// Price holds the value of the "price" field.
 	Price int64 `json:"price,omitempty"`
-	// Quantity holds the value of the "quantity" field.
-	Quantity int64 `json:"quantity,omitempty"`
 	// Edges holds the relations/edges for other nodes in the graph.
 	// The values are being populated by the ProductQuery when eager-loading is set.
-	Edges        ProductEdges `json:"edges"`
-	selectValues sql.SelectValues
+	Edges          ProductEdges `json:"edges"`
+	booth_products *int
+	product_booth  *int
+	selectValues   sql.SelectValues
 }
 
 // ProductEdges holds the relations/edges for other nodes in the graph.
 type ProductEdges struct {
 	// Booth holds the value of the booth edge.
-	Booth []*Booth `json:"booth,omitempty"`
+	Booth *Booth `json:"booth,omitempty"`
 	// Transactions holds the value of the transactions edge.
 	Transactions []*Transaction `json:"transactions,omitempty"`
 	// loadedTypes holds the information for reporting if a
@@ -42,10 +43,12 @@ type ProductEdges struct {
 }
 
 // BoothOrErr returns the Booth value or an error if the edge
-// was not loaded in eager-loading.
-func (e ProductEdges) BoothOrErr() ([]*Booth, error) {
-	if e.loadedTypes[0] {
+// was not loaded in eager-loading, or loaded but was not found.
+func (e ProductEdges) BoothOrErr() (*Booth, error) {
+	if e.Booth != nil {
 		return e.Booth, nil
+	} else if e.loadedTypes[0] {
+		return nil, &NotFoundError{label: booth.Label}
 	}
 	return nil, &NotLoadedError{edge: "booth"}
 }
@@ -64,10 +67,14 @@ func (*Product) scanValues(columns []string) ([]any, error) {
 	values := make([]any, len(columns))
 	for i := range columns {
 		switch columns[i] {
-		case product.FieldID, product.FieldPrice, product.FieldQuantity:
+		case product.FieldID, product.FieldPrice:
 			values[i] = new(sql.NullInt64)
 		case product.FieldName, product.FieldDescription:
 			values[i] = new(sql.NullString)
+		case product.ForeignKeys[0]: // booth_products
+			values[i] = new(sql.NullInt64)
+		case product.ForeignKeys[1]: // product_booth
+			values[i] = new(sql.NullInt64)
 		default:
 			values[i] = new(sql.UnknownType)
 		}
@@ -107,11 +114,19 @@ func (_m *Product) assignValues(columns []string, values []any) error {
 			} else if value.Valid {
 				_m.Price = value.Int64
 			}
-		case product.FieldQuantity:
+		case product.ForeignKeys[0]:
 			if value, ok := values[i].(*sql.NullInt64); !ok {
-				return fmt.Errorf("unexpected type %T for field quantity", values[i])
+				return fmt.Errorf("unexpected type %T for edge-field booth_products", value)
 			} else if value.Valid {
-				_m.Quantity = value.Int64
+				_m.booth_products = new(int)
+				*_m.booth_products = int(value.Int64)
+			}
+		case product.ForeignKeys[1]:
+			if value, ok := values[i].(*sql.NullInt64); !ok {
+				return fmt.Errorf("unexpected type %T for edge-field product_booth", value)
+			} else if value.Valid {
+				_m.product_booth = new(int)
+				*_m.product_booth = int(value.Int64)
 			}
 		default:
 			_m.selectValues.Set(columns[i], values[i])
@@ -167,9 +182,6 @@ func (_m *Product) String() string {
 	builder.WriteString(", ")
 	builder.WriteString("price=")
 	builder.WriteString(fmt.Sprintf("%v", _m.Price))
-	builder.WriteString(", ")
-	builder.WriteString("quantity=")
-	builder.WriteString(fmt.Sprintf("%v", _m.Quantity))
 	builder.WriteByte(')')
 	return builder.String()
 }

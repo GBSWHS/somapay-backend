@@ -84,40 +84,15 @@ func (_u *ProductUpdate) AddPrice(v int64) *ProductUpdate {
 	return _u
 }
 
-// SetQuantity sets the "quantity" field.
-func (_u *ProductUpdate) SetQuantity(v int64) *ProductUpdate {
-	_u.mutation.ResetQuantity()
-	_u.mutation.SetQuantity(v)
+// SetBoothID sets the "booth" edge to the Booth entity by ID.
+func (_u *ProductUpdate) SetBoothID(id int) *ProductUpdate {
+	_u.mutation.SetBoothID(id)
 	return _u
 }
 
-// SetNillableQuantity sets the "quantity" field if the given value is not nil.
-func (_u *ProductUpdate) SetNillableQuantity(v *int64) *ProductUpdate {
-	if v != nil {
-		_u.SetQuantity(*v)
-	}
-	return _u
-}
-
-// AddQuantity adds value to the "quantity" field.
-func (_u *ProductUpdate) AddQuantity(v int64) *ProductUpdate {
-	_u.mutation.AddQuantity(v)
-	return _u
-}
-
-// AddBoothIDs adds the "booth" edge to the Booth entity by IDs.
-func (_u *ProductUpdate) AddBoothIDs(ids ...int) *ProductUpdate {
-	_u.mutation.AddBoothIDs(ids...)
-	return _u
-}
-
-// AddBooth adds the "booth" edges to the Booth entity.
-func (_u *ProductUpdate) AddBooth(v ...*Booth) *ProductUpdate {
-	ids := make([]int, len(v))
-	for i := range v {
-		ids[i] = v[i].ID
-	}
-	return _u.AddBoothIDs(ids...)
+// SetBooth sets the "booth" edge to the Booth entity.
+func (_u *ProductUpdate) SetBooth(v *Booth) *ProductUpdate {
+	return _u.SetBoothID(v.ID)
 }
 
 // AddTransactionIDs adds the "transactions" edge to the Transaction entity by IDs.
@@ -140,25 +115,10 @@ func (_u *ProductUpdate) Mutation() *ProductMutation {
 	return _u.mutation
 }
 
-// ClearBooth clears all "booth" edges to the Booth entity.
+// ClearBooth clears the "booth" edge to the Booth entity.
 func (_u *ProductUpdate) ClearBooth() *ProductUpdate {
 	_u.mutation.ClearBooth()
 	return _u
-}
-
-// RemoveBoothIDs removes the "booth" edge to Booth entities by IDs.
-func (_u *ProductUpdate) RemoveBoothIDs(ids ...int) *ProductUpdate {
-	_u.mutation.RemoveBoothIDs(ids...)
-	return _u
-}
-
-// RemoveBooth removes "booth" edges to Booth entities.
-func (_u *ProductUpdate) RemoveBooth(v ...*Booth) *ProductUpdate {
-	ids := make([]int, len(v))
-	for i := range v {
-		ids[i] = v[i].ID
-	}
-	return _u.RemoveBoothIDs(ids...)
 }
 
 // ClearTransactions clears all "transactions" edges to the Transaction entity.
@@ -209,7 +169,18 @@ func (_u *ProductUpdate) ExecX(ctx context.Context) {
 	}
 }
 
+// check runs all checks and user-defined validators on the builder.
+func (_u *ProductUpdate) check() error {
+	if _u.mutation.BoothCleared() && len(_u.mutation.BoothIDs()) > 0 {
+		return errors.New(`ent: clearing a required unique edge "Product.booth"`)
+	}
+	return nil
+}
+
 func (_u *ProductUpdate) sqlSave(ctx context.Context) (_node int, err error) {
+	if err := _u.check(); err != nil {
+		return _node, err
+	}
 	_spec := sqlgraph.NewUpdateSpec(product.Table, product.Columns, sqlgraph.NewFieldSpec(product.FieldID, field.TypeInt))
 	if ps := _u.mutation.predicates; len(ps) > 0 {
 		_spec.Predicate = func(selector *sql.Selector) {
@@ -233,47 +204,25 @@ func (_u *ProductUpdate) sqlSave(ctx context.Context) (_node int, err error) {
 	if value, ok := _u.mutation.AddedPrice(); ok {
 		_spec.AddField(product.FieldPrice, field.TypeInt64, value)
 	}
-	if value, ok := _u.mutation.Quantity(); ok {
-		_spec.SetField(product.FieldQuantity, field.TypeInt64, value)
-	}
-	if value, ok := _u.mutation.AddedQuantity(); ok {
-		_spec.AddField(product.FieldQuantity, field.TypeInt64, value)
-	}
 	if _u.mutation.BoothCleared() {
 		edge := &sqlgraph.EdgeSpec{
-			Rel:     sqlgraph.M2M,
-			Inverse: true,
+			Rel:     sqlgraph.M2O,
+			Inverse: false,
 			Table:   product.BoothTable,
-			Columns: product.BoothPrimaryKey,
+			Columns: []string{product.BoothColumn},
 			Bidi:    false,
 			Target: &sqlgraph.EdgeTarget{
 				IDSpec: sqlgraph.NewFieldSpec(booth.FieldID, field.TypeInt),
 			},
-		}
-		_spec.Edges.Clear = append(_spec.Edges.Clear, edge)
-	}
-	if nodes := _u.mutation.RemovedBoothIDs(); len(nodes) > 0 && !_u.mutation.BoothCleared() {
-		edge := &sqlgraph.EdgeSpec{
-			Rel:     sqlgraph.M2M,
-			Inverse: true,
-			Table:   product.BoothTable,
-			Columns: product.BoothPrimaryKey,
-			Bidi:    false,
-			Target: &sqlgraph.EdgeTarget{
-				IDSpec: sqlgraph.NewFieldSpec(booth.FieldID, field.TypeInt),
-			},
-		}
-		for _, k := range nodes {
-			edge.Target.Nodes = append(edge.Target.Nodes, k)
 		}
 		_spec.Edges.Clear = append(_spec.Edges.Clear, edge)
 	}
 	if nodes := _u.mutation.BoothIDs(); len(nodes) > 0 {
 		edge := &sqlgraph.EdgeSpec{
-			Rel:     sqlgraph.M2M,
-			Inverse: true,
+			Rel:     sqlgraph.M2O,
+			Inverse: false,
 			Table:   product.BoothTable,
-			Columns: product.BoothPrimaryKey,
+			Columns: []string{product.BoothColumn},
 			Bidi:    false,
 			Target: &sqlgraph.EdgeTarget{
 				IDSpec: sqlgraph.NewFieldSpec(booth.FieldID, field.TypeInt),
@@ -404,40 +353,15 @@ func (_u *ProductUpdateOne) AddPrice(v int64) *ProductUpdateOne {
 	return _u
 }
 
-// SetQuantity sets the "quantity" field.
-func (_u *ProductUpdateOne) SetQuantity(v int64) *ProductUpdateOne {
-	_u.mutation.ResetQuantity()
-	_u.mutation.SetQuantity(v)
+// SetBoothID sets the "booth" edge to the Booth entity by ID.
+func (_u *ProductUpdateOne) SetBoothID(id int) *ProductUpdateOne {
+	_u.mutation.SetBoothID(id)
 	return _u
 }
 
-// SetNillableQuantity sets the "quantity" field if the given value is not nil.
-func (_u *ProductUpdateOne) SetNillableQuantity(v *int64) *ProductUpdateOne {
-	if v != nil {
-		_u.SetQuantity(*v)
-	}
-	return _u
-}
-
-// AddQuantity adds value to the "quantity" field.
-func (_u *ProductUpdateOne) AddQuantity(v int64) *ProductUpdateOne {
-	_u.mutation.AddQuantity(v)
-	return _u
-}
-
-// AddBoothIDs adds the "booth" edge to the Booth entity by IDs.
-func (_u *ProductUpdateOne) AddBoothIDs(ids ...int) *ProductUpdateOne {
-	_u.mutation.AddBoothIDs(ids...)
-	return _u
-}
-
-// AddBooth adds the "booth" edges to the Booth entity.
-func (_u *ProductUpdateOne) AddBooth(v ...*Booth) *ProductUpdateOne {
-	ids := make([]int, len(v))
-	for i := range v {
-		ids[i] = v[i].ID
-	}
-	return _u.AddBoothIDs(ids...)
+// SetBooth sets the "booth" edge to the Booth entity.
+func (_u *ProductUpdateOne) SetBooth(v *Booth) *ProductUpdateOne {
+	return _u.SetBoothID(v.ID)
 }
 
 // AddTransactionIDs adds the "transactions" edge to the Transaction entity by IDs.
@@ -460,25 +384,10 @@ func (_u *ProductUpdateOne) Mutation() *ProductMutation {
 	return _u.mutation
 }
 
-// ClearBooth clears all "booth" edges to the Booth entity.
+// ClearBooth clears the "booth" edge to the Booth entity.
 func (_u *ProductUpdateOne) ClearBooth() *ProductUpdateOne {
 	_u.mutation.ClearBooth()
 	return _u
-}
-
-// RemoveBoothIDs removes the "booth" edge to Booth entities by IDs.
-func (_u *ProductUpdateOne) RemoveBoothIDs(ids ...int) *ProductUpdateOne {
-	_u.mutation.RemoveBoothIDs(ids...)
-	return _u
-}
-
-// RemoveBooth removes "booth" edges to Booth entities.
-func (_u *ProductUpdateOne) RemoveBooth(v ...*Booth) *ProductUpdateOne {
-	ids := make([]int, len(v))
-	for i := range v {
-		ids[i] = v[i].ID
-	}
-	return _u.RemoveBoothIDs(ids...)
 }
 
 // ClearTransactions clears all "transactions" edges to the Transaction entity.
@@ -542,7 +451,18 @@ func (_u *ProductUpdateOne) ExecX(ctx context.Context) {
 	}
 }
 
+// check runs all checks and user-defined validators on the builder.
+func (_u *ProductUpdateOne) check() error {
+	if _u.mutation.BoothCleared() && len(_u.mutation.BoothIDs()) > 0 {
+		return errors.New(`ent: clearing a required unique edge "Product.booth"`)
+	}
+	return nil
+}
+
 func (_u *ProductUpdateOne) sqlSave(ctx context.Context) (_node *Product, err error) {
+	if err := _u.check(); err != nil {
+		return _node, err
+	}
 	_spec := sqlgraph.NewUpdateSpec(product.Table, product.Columns, sqlgraph.NewFieldSpec(product.FieldID, field.TypeInt))
 	id, ok := _u.mutation.ID()
 	if !ok {
@@ -583,47 +503,25 @@ func (_u *ProductUpdateOne) sqlSave(ctx context.Context) (_node *Product, err er
 	if value, ok := _u.mutation.AddedPrice(); ok {
 		_spec.AddField(product.FieldPrice, field.TypeInt64, value)
 	}
-	if value, ok := _u.mutation.Quantity(); ok {
-		_spec.SetField(product.FieldQuantity, field.TypeInt64, value)
-	}
-	if value, ok := _u.mutation.AddedQuantity(); ok {
-		_spec.AddField(product.FieldQuantity, field.TypeInt64, value)
-	}
 	if _u.mutation.BoothCleared() {
 		edge := &sqlgraph.EdgeSpec{
-			Rel:     sqlgraph.M2M,
-			Inverse: true,
+			Rel:     sqlgraph.M2O,
+			Inverse: false,
 			Table:   product.BoothTable,
-			Columns: product.BoothPrimaryKey,
+			Columns: []string{product.BoothColumn},
 			Bidi:    false,
 			Target: &sqlgraph.EdgeTarget{
 				IDSpec: sqlgraph.NewFieldSpec(booth.FieldID, field.TypeInt),
 			},
-		}
-		_spec.Edges.Clear = append(_spec.Edges.Clear, edge)
-	}
-	if nodes := _u.mutation.RemovedBoothIDs(); len(nodes) > 0 && !_u.mutation.BoothCleared() {
-		edge := &sqlgraph.EdgeSpec{
-			Rel:     sqlgraph.M2M,
-			Inverse: true,
-			Table:   product.BoothTable,
-			Columns: product.BoothPrimaryKey,
-			Bidi:    false,
-			Target: &sqlgraph.EdgeTarget{
-				IDSpec: sqlgraph.NewFieldSpec(booth.FieldID, field.TypeInt),
-			},
-		}
-		for _, k := range nodes {
-			edge.Target.Nodes = append(edge.Target.Nodes, k)
 		}
 		_spec.Edges.Clear = append(_spec.Edges.Clear, edge)
 	}
 	if nodes := _u.mutation.BoothIDs(); len(nodes) > 0 {
 		edge := &sqlgraph.EdgeSpec{
-			Rel:     sqlgraph.M2M,
-			Inverse: true,
+			Rel:     sqlgraph.M2O,
+			Inverse: false,
 			Table:   product.BoothTable,
-			Columns: product.BoothPrimaryKey,
+			Columns: []string{product.BoothColumn},
 			Bidi:    false,
 			Target: &sqlgraph.EdgeTarget{
 				IDSpec: sqlgraph.NewFieldSpec(booth.FieldID, field.TypeInt),

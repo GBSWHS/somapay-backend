@@ -370,7 +370,7 @@ func (c *BoothClient) QueryProducts(_m *Booth) *ProductQuery {
 		step := sqlgraph.NewStep(
 			sqlgraph.From(booth.Table, booth.FieldID, id),
 			sqlgraph.To(product.Table, product.FieldID),
-			sqlgraph.Edge(sqlgraph.M2M, false, booth.ProductsTable, booth.ProductsPrimaryKey...),
+			sqlgraph.Edge(sqlgraph.O2M, false, booth.ProductsTable, booth.ProductsColumn),
 		)
 		fromV = sqlgraph.Neighbors(_m.driver.Dialect(), step)
 		return fromV, nil
@@ -684,7 +684,7 @@ func (c *ProductClient) QueryBooth(_m *Product) *BoothQuery {
 		step := sqlgraph.NewStep(
 			sqlgraph.From(product.Table, product.FieldID, id),
 			sqlgraph.To(booth.Table, booth.FieldID),
-			sqlgraph.Edge(sqlgraph.M2M, true, product.BoothTable, product.BoothPrimaryKey...),
+			sqlgraph.Edge(sqlgraph.M2O, false, product.BoothTable, product.BoothColumn),
 		)
 		fromV = sqlgraph.Neighbors(_m.driver.Dialect(), step)
 		return fromV, nil

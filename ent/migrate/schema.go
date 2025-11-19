@@ -62,13 +62,28 @@ var (
 		{Name: "name", Type: field.TypeString},
 		{Name: "description", Type: field.TypeString, Nullable: true},
 		{Name: "price", Type: field.TypeInt64},
-		{Name: "quantity", Type: field.TypeInt64},
+		{Name: "booth_products", Type: field.TypeInt, Nullable: true},
+		{Name: "product_booth", Type: field.TypeInt},
 	}
 	// ProductsTable holds the schema information for the "products" table.
 	ProductsTable = &schema.Table{
 		Name:       "products",
 		Columns:    ProductsColumns,
 		PrimaryKey: []*schema.Column{ProductsColumns[0]},
+		ForeignKeys: []*schema.ForeignKey{
+			{
+				Symbol:     "products_booths_products",
+				Columns:    []*schema.Column{ProductsColumns[4]},
+				RefColumns: []*schema.Column{BoothsColumns[0]},
+				OnDelete:   schema.SetNull,
+			},
+			{
+				Symbol:     "products_booths_booth",
+				Columns:    []*schema.Column{ProductsColumns[5]},
+				RefColumns: []*schema.Column{BoothsColumns[0]},
+				OnDelete:   schema.NoAction,
+			},
+		},
 	}
 	// TransactionsColumns holds the columns for the "transactions" table.
 	TransactionsColumns = []*schema.Column{
@@ -122,31 +137,6 @@ var (
 		Columns:    UsersColumns,
 		PrimaryKey: []*schema.Column{UsersColumns[0]},
 	}
-	// BoothProductsColumns holds the columns for the "booth_products" table.
-	BoothProductsColumns = []*schema.Column{
-		{Name: "booth_id", Type: field.TypeInt},
-		{Name: "product_id", Type: field.TypeInt},
-	}
-	// BoothProductsTable holds the schema information for the "booth_products" table.
-	BoothProductsTable = &schema.Table{
-		Name:       "booth_products",
-		Columns:    BoothProductsColumns,
-		PrimaryKey: []*schema.Column{BoothProductsColumns[0], BoothProductsColumns[1]},
-		ForeignKeys: []*schema.ForeignKey{
-			{
-				Symbol:     "booth_products_booth_id",
-				Columns:    []*schema.Column{BoothProductsColumns[0]},
-				RefColumns: []*schema.Column{BoothsColumns[0]},
-				OnDelete:   schema.Cascade,
-			},
-			{
-				Symbol:     "booth_products_product_id",
-				Columns:    []*schema.Column{BoothProductsColumns[1]},
-				RefColumns: []*schema.Column{ProductsColumns[0]},
-				OnDelete:   schema.Cascade,
-			},
-		},
-	}
 	// Tables holds all the tables in the schema.
 	Tables = []*schema.Table{
 		BoothsTable,
@@ -154,7 +144,6 @@ var (
 		ProductsTable,
 		TransactionsTable,
 		UsersTable,
-		BoothProductsTable,
 	}
 )
 
@@ -162,9 +151,9 @@ func init() {
 	BoothsTable.ForeignKeys[0].RefTable = UsersTable
 	ChargeRequestsTable.ForeignKeys[0].RefTable = UsersTable
 	ChargeRequestsTable.ForeignKeys[1].RefTable = UsersTable
+	ProductsTable.ForeignKeys[0].RefTable = BoothsTable
+	ProductsTable.ForeignKeys[1].RefTable = BoothsTable
 	TransactionsTable.ForeignKeys[0].RefTable = BoothsTable
 	TransactionsTable.ForeignKeys[1].RefTable = ProductsTable
 	TransactionsTable.ForeignKeys[2].RefTable = UsersTable
-	BoothProductsTable.ForeignKeys[0].RefTable = BoothsTable
-	BoothProductsTable.ForeignKeys[1].RefTable = ProductsTable
 }

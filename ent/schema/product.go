@@ -15,15 +15,14 @@ func (Product) Fields() []ent.Field {
 		field.String("name"),
 		field.String("description").Optional(),
 		field.Int64("price"),
-		field.Int64("quantity"),
 	}
 }
 
 func (Product) Edges() []ent.Edge {
 	return []ent.Edge{
-		edge.From("booth", Booth.Type).
-			Ref("products").
-			Required(),
+		edge.To("booth", Booth.Type).
+			Required().
+			Unique(),
 		edge.To("transactions", Transaction.Type),
 	}
 }

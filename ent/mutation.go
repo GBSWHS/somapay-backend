@@ -1089,11 +1089,8 @@ type ProductMutation struct {
 	description         *string
 	price               *int64
 	addprice            *int64
-	quantity            *int64
-	addquantity         *int64
 	clearedFields       map[string]struct{}
-	booth               map[int]struct{}
-	removedbooth        map[int]struct{}
+	booth               *int
 	clearedbooth        bool
 	transactions        map[int]struct{}
 	removedtransactions map[int]struct{}
@@ -1342,70 +1339,9 @@ func (m *ProductMutation) ResetPrice() {
 	m.addprice = nil
 }
 
-// SetQuantity sets the "quantity" field.
-func (m *ProductMutation) SetQuantity(i int64) {
-	m.quantity = &i
-	m.addquantity = nil
-}
-
-// Quantity returns the value of the "quantity" field in the mutation.
-func (m *ProductMutation) Quantity() (r int64, exists bool) {
-	v := m.quantity
-	if v == nil {
-		return
-	}
-	return *v, true
-}
-
-// OldQuantity returns the old "quantity" field's value of the Product entity.
-// If the Product object wasn't provided to the builder, the object is fetched from the database.
-// An error is returned if the mutation operation is not UpdateOne, or the database query fails.
-func (m *ProductMutation) OldQuantity(ctx context.Context) (v int64, err error) {
-	if !m.op.Is(OpUpdateOne) {
-		return v, errors.New("OldQuantity is only allowed on UpdateOne operations")
-	}
-	if m.id == nil || m.oldValue == nil {
-		return v, errors.New("OldQuantity requires an ID field in the mutation")
-	}
-	oldValue, err := m.oldValue(ctx)
-	if err != nil {
-		return v, fmt.Errorf("querying old value for OldQuantity: %w", err)
-	}
-	return oldValue.Quantity, nil
-}
-
-// AddQuantity adds i to the "quantity" field.
-func (m *ProductMutation) AddQuantity(i int64) {
-	if m.addquantity != nil {
-		*m.addquantity += i
-	} else {
-		m.addquantity = &i
-	}
-}
-
-// AddedQuantity returns the value that was added to the "quantity" field in this mutation.
-func (m *ProductMutation) AddedQuantity() (r int64, exists bool) {
-	v := m.addquantity
-	if v == nil {
-		return
-	}
-	return *v, true
-}
-
-// ResetQuantity resets all changes to the "quantity" field.
-func (m *ProductMutation) ResetQuantity() {
-	m.quantity = nil
-	m.addquantity = nil
-}
-
-// AddBoothIDs adds the "booth" edge to the Booth entity by ids.
-func (m *ProductMutation) AddBoothIDs(ids ...int) {
-	if m.booth == nil {
-		m.booth = make(map[int]struct{})
-	}
-	for i := range ids {
-		m.booth[ids[i]] = struct{}{}
-	}
+// SetBoothID sets the "booth" edge to the Booth entity by id.
+func (m *ProductMutation) SetBoothID(id int) {
+	m.booth = &id
 }
 
 // ClearBooth clears the "booth" edge to the Booth entity.
@@ -1418,29 +1354,20 @@ func (m *ProductMutation) BoothCleared() bool {
 	return m.clearedbooth
 }
 
-// RemoveBoothIDs removes the "booth" edge to the Booth entity by IDs.
-func (m *ProductMutation) RemoveBoothIDs(ids ...int) {
-	if m.removedbooth == nil {
-		m.removedbooth = make(map[int]struct{})
-	}
-	for i := range ids {
-		delete(m.booth, ids[i])
-		m.removedbooth[ids[i]] = struct{}{}
-	}
-}
-
-// RemovedBooth returns the removed IDs of the "booth" edge to the Booth entity.
-func (m *ProductMutation) RemovedBoothIDs() (ids []int) {
-	for id := range m.removedbooth {
-		ids = append(ids, id)
+// BoothID returns the "booth" edge ID in the mutation.
+func (m *ProductMutation) BoothID() (id int, exists bool) {
+	if m.booth != nil {
+		return *m.booth, true
 	}
 	return
 }
 
 // BoothIDs returns the "booth" edge IDs in the mutation.
+// Note that IDs always returns len(IDs) <= 1 for unique edges, and you should use
+// BoothID instead. It exists only for internal usage by the builders.
 func (m *ProductMutation) BoothIDs() (ids []int) {
-	for id := range m.booth {
-		ids = append(ids, id)
+	if id := m.booth; id != nil {
+		ids = append(ids, *id)
 	}
 	return
 }
@@ -1449,7 +1376,6 @@ func (m *ProductMutation) BoothIDs() (ids []int) {
 func (m *ProductMutation) ResetBooth() {
 	m.booth = nil
 	m.clearedbooth = false
-	m.removedbooth = nil
 }
 
 // AddTransactionIDs adds the "transactions" edge to the Transaction entity by ids.
@@ -1540,7 +1466,7 @@ func (m *ProductMutation) Type() string {
 // order to get all numeric fields that were incremented/decremented, call
 // AddedFields().
 func (m *ProductMutation) Fields() []string {
-	fields := make([]string, 0, 4)
+	fields := make([]string, 0, 3)
 	if m.name != nil {
 		fields = append(fields, product.FieldName)
 	}
@@ -1549,9 +1475,6 @@ func (m *ProductMutation) Fields() []string {
 	}
 	if m.price != nil {
 		fields = append(fields, product.FieldPrice)
-	}
-	if m.quantity != nil {
-		fields = append(fields, product.FieldQuantity)
 	}
 	return fields
 }
@@ -1567,8 +1490,6 @@ func (m *ProductMutation) Field(name string) (ent.Value, bool) {
 		return m.Description()
 	case product.FieldPrice:
 		return m.Price()
-	case product.FieldQuantity:
-		return m.Quantity()
 	}
 	return nil, false
 }
@@ -1584,8 +1505,6 @@ func (m *ProductMutation) OldField(ctx context.Context, name string) (ent.Value,
 		return m.OldDescription(ctx)
 	case product.FieldPrice:
 		return m.OldPrice(ctx)
-	case product.FieldQuantity:
-		return m.OldQuantity(ctx)
 	}
 	return nil, fmt.Errorf("unknown Product field %s", name)
 }
@@ -1616,13 +1535,6 @@ func (m *ProductMutation) SetField(name string, value ent.Value) error {
 		}
 		m.SetPrice(v)
 		return nil
-	case product.FieldQuantity:
-		v, ok := value.(int64)
-		if !ok {
-			return fmt.Errorf("unexpected type %T for field %s", value, name)
-		}
-		m.SetQuantity(v)
-		return nil
 	}
 	return fmt.Errorf("unknown Product field %s", name)
 }
@@ -1634,9 +1546,6 @@ func (m *ProductMutation) AddedFields() []string {
 	if m.addprice != nil {
 		fields = append(fields, product.FieldPrice)
 	}
-	if m.addquantity != nil {
-		fields = append(fields, product.FieldQuantity)
-	}
 	return fields
 }
 
@@ -1647,8 +1556,6 @@ func (m *ProductMutation) AddedField(name string) (ent.Value, bool) {
 	switch name {
 	case product.FieldPrice:
 		return m.AddedPrice()
-	case product.FieldQuantity:
-		return m.AddedQuantity()
 	}
 	return nil, false
 }
@@ -1664,13 +1571,6 @@ func (m *ProductMutation) AddField(name string, value ent.Value) error {
 			return fmt.Errorf("unexpected type %T for field %s", value, name)
 		}
 		m.AddPrice(v)
-		return nil
-	case product.FieldQuantity:
-		v, ok := value.(int64)
-		if !ok {
-			return fmt.Errorf("unexpected type %T for field %s", value, name)
-		}
-		m.AddQuantity(v)
 		return nil
 	}
 	return fmt.Errorf("unknown Product numeric field %s", name)
@@ -1717,9 +1617,6 @@ func (m *ProductMutation) ResetField(name string) error {
 	case product.FieldPrice:
 		m.ResetPrice()
 		return nil
-	case product.FieldQuantity:
-		m.ResetQuantity()
-		return nil
 	}
 	return fmt.Errorf("unknown Product field %s", name)
 }
@@ -1741,11 +1638,9 @@ func (m *ProductMutation) AddedEdges() []string {
 func (m *ProductMutation) AddedIDs(name string) []ent.Value {
 	switch name {
 	case product.EdgeBooth:
-		ids := make([]ent.Value, 0, len(m.booth))
-		for id := range m.booth {
-			ids = append(ids, id)
+		if id := m.booth; id != nil {
+			return []ent.Value{*id}
 		}
-		return ids
 	case product.EdgeTransactions:
 		ids := make([]ent.Value, 0, len(m.transactions))
 		for id := range m.transactions {
@@ -1759,9 +1654,6 @@ func (m *ProductMutation) AddedIDs(name string) []ent.Value {
 // RemovedEdges returns all edge names that were removed in this mutation.
 func (m *ProductMutation) RemovedEdges() []string {
 	edges := make([]string, 0, 2)
-	if m.removedbooth != nil {
-		edges = append(edges, product.EdgeBooth)
-	}
 	if m.removedtransactions != nil {
 		edges = append(edges, product.EdgeTransactions)
 	}
@@ -1772,12 +1664,6 @@ func (m *ProductMutation) RemovedEdges() []string {
 // the given name in this mutation.
 func (m *ProductMutation) RemovedIDs(name string) []ent.Value {
 	switch name {
-	case product.EdgeBooth:
-		ids := make([]ent.Value, 0, len(m.removedbooth))
-		for id := range m.removedbooth {
-			ids = append(ids, id)
-		}
-		return ids
 	case product.EdgeTransactions:
 		ids := make([]ent.Value, 0, len(m.removedtransactions))
 		for id := range m.removedtransactions {
@@ -1816,6 +1702,9 @@ func (m *ProductMutation) EdgeCleared(name string) bool {
 // if that edge is not defined in the schema.
 func (m *ProductMutation) ClearEdge(name string) error {
 	switch name {
+	case product.EdgeBooth:
+		m.ClearBooth()
+		return nil
 	}
 	return fmt.Errorf("unknown Product unique edge %s", name)
 }

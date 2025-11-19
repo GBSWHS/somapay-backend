@@ -29,11 +29,13 @@ const (
 	UserInverseTable = "users"
 	// UserColumn is the table column denoting the user relation/edge.
 	UserColumn = "user_booth"
-	// ProductsTable is the table that holds the products relation/edge. The primary key declared below.
-	ProductsTable = "booth_products"
+	// ProductsTable is the table that holds the products relation/edge.
+	ProductsTable = "products"
 	// ProductsInverseTable is the table name for the Product entity.
 	// It exists in this package in order to avoid circular dependency with the "product" package.
 	ProductsInverseTable = "products"
+	// ProductsColumn is the table column denoting the products relation/edge.
+	ProductsColumn = "booth_products"
 	// TransactionsTable is the table that holds the transactions relation/edge.
 	TransactionsTable = "transactions"
 	// TransactionsInverseTable is the table name for the Transaction entity.
@@ -54,12 +56,6 @@ var Columns = []string{
 var ForeignKeys = []string{
 	"user_booth",
 }
-
-var (
-	// ProductsPrimaryKey and ProductsColumn2 are the table columns denoting the
-	// primary key for the products relation (M2M).
-	ProductsPrimaryKey = []string{"booth_id", "product_id"}
-)
 
 // ValidColumn reports if the column name is valid (part of the table columns).
 func ValidColumn(column string) bool {
@@ -134,7 +130,7 @@ func newProductsStep() *sqlgraph.Step {
 	return sqlgraph.NewStep(
 		sqlgraph.From(Table, FieldID),
 		sqlgraph.To(ProductsInverseTable, FieldID),
-		sqlgraph.Edge(sqlgraph.M2M, false, ProductsTable, ProductsPrimaryKey...),
+		sqlgraph.Edge(sqlgraph.O2M, false, ProductsTable, ProductsColumn),
 	)
 }
 func newTransactionsStep() *sqlgraph.Step {
