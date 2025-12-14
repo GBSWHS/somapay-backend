@@ -23,10 +23,15 @@ func CreateUserHandler(client *ent.Client) fiber.Handler {
 			return c.Status(fiber.StatusBadRequest).JSON(fiber.Map{"error": "invalid request"})
 		}
 
+		hashedPass, err := hashPassword(req.Password)
+		if err != nil {
+			return c.Status(fiber.StatusInternalServerError).JSON(fiber.Map{"error": "internal error"})
+		}
+
 		u, err := client.User.
 			Create().
 			SetUsername(req.Username).
-			SetPassword(req.Password).
+			SetPassword(hashedPass).
 			SetPin(req.Pin).
 			SetRole(req.Role).
 			SetPoint(0).

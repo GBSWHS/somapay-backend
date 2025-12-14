@@ -8,14 +8,13 @@ import (
 	"somapay-backend/storage"
 )
 
-type LoginRequest struct {
-	Username string `json:"student_number"`
-	Password string `json:"password"`
-}
-
 func LoginHandler(client *ent.Client, sessionStore *storage.SessionStore) fiber.Handler {
 	return func(c *fiber.Ctx) error {
-		var req LoginRequest
+		var req struct {
+			Username string `json:"student_number"`
+			Password string `json:"password"`
+		}
+
 		if err := c.BodyParser(&req); err != nil {
 			return c.Status(fiber.StatusBadRequest).JSON(fiber.Map{"error": "invalid request"})
 		}
@@ -28,7 +27,7 @@ func LoginHandler(client *ent.Client, sessionStore *storage.SessionStore) fiber.
 			return c.Status(fiber.StatusUnauthorized).JSON(fiber.Map{"error": "user not found"})
 		}
 
-		if u.Password != req.Password {
+		if !checkPasswordHash(req.Password, u.Password) {
 			return c.Status(fiber.StatusUnauthorized).JSON(fiber.Map{"error": "invalid password"})
 		}
 
